@@ -26795,17 +26795,19 @@ renderers.notion=function(){
     const pid=b.parent?.page_id||b.page_id;
     if(pid){if(!blockMap[pid])blockMap[pid]=[];blockMap[pid].push(b);}
   });
-  // Build title map from property_values
+  // Build title map from property_values (use select/title types)
   const titleMap={};
   propValues.forEach(pv=>{
-    if(pv.property_type==='title'&&pv.value){titleMap[pv.page_id]=pv.value;}
+    if(!titleMap[pv.page_id]){
+      if(pv.property_type==='title'&&pv.value){titleMap[pv.page_id]=typeof pv.value==='string'?pv.value:JSON.stringify(pv.value);}
+      else if(pv.property_type==='select'&&pv.value?.name){titleMap[pv.page_id]=pv.value.name;}
+    }
   });
   pages.forEach(p=>{
-    // Get title from property_values or properties
     let title=titleMap[p.id]||'Untitled';
     if(title==='Untitled'){
-      const tp=p.properties?.Name||p.properties?.Title||p.properties?.title;
-      if(tp?.title?.length)title=tp.title.map(t=>t.plain_text||t.text?.content||'').join('');
+      const pageBlk=blockMap[p.id]||[];
+      if(pageBlk.length&&pageBlk[0].content)title=pageBlk[0].content.substring(0,60)+(pageBlk[0].content.length>60?'...':'');
     }
     const dbId=p.parent?.database_id||p.database_id;
     const dbName=dbId?dbMap[dbId]||'':'';
@@ -26815,7 +26817,7 @@ renderers.notion=function(){
       const text=b.content||'';
       if(text)content+=text+'\n';
     });
-    h+='<div class="notion-page" onclick="this.classList.toggle(\\x27open\\x27)">';
+    h+='<div class="notion-page" onclick="this.classList.toggle(&quot;open&quot;)">';
     h+='<div class="np-title">'+esc(title)+'</div>';
     if(dbName)h+='<div class="np-db">\uD83D\uDDC3\uFE0F '+esc(dbName)+'</div>';
     if(p.last_edited_time)h+='<div class="np-date">Last edited: '+p.last_edited_time.substring(0,10)+'</div>';
